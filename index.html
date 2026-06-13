@@ -229,7 +229,7 @@ async function run(){
   const opts = buildOpts();
   try{
     if(mode==="video"){ await runVideo(c.key, prompt, opts, stat, res); return; }
-    const r=await fetch("/api/run",{method:"POST",headers:{"Content-Type":"application/json"},
+    const r=await fetch("/go/run",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({task,provider:"xai",model:"grok-imagine",api_key:c.key,prompt,
         image:curImage,images:[curImage],opts})});
     const data=await r.json();
@@ -239,7 +239,7 @@ async function run(){
     const urls = data.urls && data.urls.length ? data.urls : [data.url];
     res.innerHTML="";
     urls.forEach((u,i)=>{
-      const src = (u.startsWith("data:") || u.startsWith("/")) ? u : "/api/proxy?url="+encodeURIComponent(u);
+      const src = (u.startsWith("data:") || u.startsWith("/")) ? u : "/go/proxy?url="+encodeURIComponent(u);
       const box=document.createElement("div"); box.className="out";
       box.innerHTML = data.type==="video"
         ? `<video src="${src}" controls autoplay loop></video><a class="dl" href="${src}" download="output.mp4">⬇</a>`
@@ -255,14 +255,14 @@ async function run(){
 async function runVideo(apiKey, prompt, opts, stat, res){
   const post=(url,body)=>fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json());
   stat.textContent="Starting video…";
-  const s=await post("/api/video/start",{api_key:apiKey,prompt,image:curImage,opts});
+  const s=await post("/go/video/start",{api_key:apiKey,prompt,image:curImage,opts});
   if(s.error) throw new Error(s.error);
   let url=s.url;
   if(!url){
     const rid=s.request_id;
     for(let i=0;i<90;i++){            // ~6 min at 4s intervals
       await new Promise(r=>setTimeout(r,4000));
-      const st=await post("/api/video/status",{api_key:apiKey,request_id:rid});
+      const st=await post("/go/video/status",{api_key:apiKey,request_id:rid});
       if(st.error) throw new Error(st.error);
       if(st.status==="done"){ url=st.url; break; }
       stat.textContent="Rendering video… "+((i+1)*4)+"s";
@@ -270,7 +270,7 @@ async function runVideo(apiKey, prompt, opts, stat, res){
   }
   if(!url) throw new Error("Video timed out — try again.");
   stat.textContent="";
-  const src=(url.startsWith("data:")||url.startsWith("/"))?url:"/api/proxy?url="+encodeURIComponent(url);
+  const src=(url.startsWith("data:")||url.startsWith("/"))?url:"/go/proxy?url="+encodeURIComponent(url);
   res.innerHTML=`<div class="out"><video src="${src}" controls autoplay loop></video>`+
                 `<a class="dl" href="${src}" download="output.mp4">⬇</a></div>`;
 }

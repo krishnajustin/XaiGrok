@@ -74,12 +74,12 @@ def index():
         return Response(f.read(), mimetype="text/html")
 
 
-@app.route("/api/providers")
+@app.route("/go/providers")
 def get_providers():
     return jsonify(providers.public_registry())
 
 
-@app.route("/api/run", methods=["POST"])
+@app.route("/go/run", methods=["POST"])
 def run():
     body = request.get_json(force=True)
     task = body.get("task")
@@ -106,7 +106,7 @@ def run():
         return jsonify({"error": f"Unexpected error: {e}"}), 500
 
 
-@app.route("/api/video/start", methods=["POST"])
+@app.route("/go/video/start", methods=["POST"])
 def video_start():
     body = request.get_json(force=True)
     api_key = _resolve_key(body)
@@ -122,7 +122,7 @@ def video_start():
         return jsonify({"error": f"Unexpected error: {e}"}), 500
 
 
-@app.route("/api/video/status", methods=["POST"])
+@app.route("/go/video/status", methods=["POST"])
 def video_status():
     body = request.get_json(force=True)
     api_key = _resolve_key(body)
@@ -137,7 +137,7 @@ def video_status():
         return jsonify({"error": f"Unexpected error: {e}"}), 500
 
 
-@app.route("/api/proxy")
+@app.route("/go/proxy")
 def proxy():
     """Stream a remote image/video through the server so the browser can
     display & download it without CORS issues."""
