@@ -215,7 +215,7 @@ async function run(){
   const res=document.getElementById("result");
   msg("");
 
-  if(!c.key) return err("Add your xAI API key in ⚙ Settings.");
+  // key may be blank — the server falls back to its XAI_API_KEY env var
   if(mode!=="generate" && !curImage) return err("Drop or choose a source image first.");
   if(!prompt)   return err("Type a prompt describing what you want.");
 

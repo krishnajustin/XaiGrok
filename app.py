@@ -59,6 +59,12 @@ def _persist_data_urls(result):
     return result
 
 
+def _resolve_key(body):
+    """Use the browser-provided key if present, else fall back to the
+    XAI_API_KEY environment variable (set in Vercel project settings)."""
+    return (body.get("api_key") or "").strip() or os.environ.get("XAI_API_KEY", "").strip()
+
+
 @app.route("/")
 def index():
     # Return HTML with an explicit content-type. send_from_directory uses a
@@ -79,7 +85,7 @@ def run():
     task = body.get("task")
     provider = body.get("provider")
     model = body.get("model")
-    api_key = (body.get("api_key") or "").strip()
+    api_key = _resolve_key(body)
     prompt = body.get("prompt")
     image = body.get("image")          # single data URL or base64 (back-compat)
     images = body.get("images")        # list of data URLs (multi-reference)
@@ -103,7 +109,7 @@ def run():
 @app.route("/api/video/start", methods=["POST"])
 def video_start():
     body = request.get_json(force=True)
-    api_key = (body.get("api_key") or "").strip()
+    api_key = _resolve_key(body)
     try:
         out = providers.xai_video_start(api_key, body.get("prompt"),
                                         body.get("image"), body.get("opts") or {})
@@ -119,7 +125,7 @@ def video_start():
 @app.route("/api/video/status", methods=["POST"])
 def video_status():
     body = request.get_json(force=True)
-    api_key = (body.get("api_key") or "").strip()
+    api_key = _resolve_key(body)
     try:
         out = providers.xai_video_status(api_key, body.get("request_id"))
         return jsonify(out)
