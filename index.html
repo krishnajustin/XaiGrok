@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>AI Studio</title>
+<style>
+  :root{
+    --bg:#0d0f14; --panel:#161a22; --panel2:#1d222c; --line:#283041;
+    --text:#e7ebf3; --muted:#8a93a6; --accent:#6d8bff; --accent2:#9a6dff;
+    --ok:#3ecf8e; --err:#ff6b6b; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);color:var(--text);font-size:15px;min-height:100vh}
+  header{display:flex;align-items:center;justify-content:space-between;
+    padding:16px 24px;border-bottom:1px solid var(--line)}
+  header h1{font-size:17px;margin:0;font-weight:600}
+  header h1 span{background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .btn{background:var(--panel2);color:var(--text);border:1px solid var(--line);
+    padding:9px 15px;border-radius:9px;cursor:pointer;font-size:13px}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));border:0;font-weight:600;font-size:15px}
+  .btn.primary:disabled{opacity:.45;cursor:not-allowed}
+  .wrap{max-width:880px;margin:0 auto;padding:26px 22px}
+  .modeToggle{display:flex;gap:8px;justify-content:center;margin-bottom:24px}
+  .modeToggle .tab{padding:10px 22px;border-radius:999px;background:var(--panel);
+    border:1px solid var(--line);cursor:pointer;color:var(--muted);font-weight:500}
+  .modeToggle .tab.active{color:var(--text);border-color:var(--accent);background:var(--panel2)}
+  .drop{border:2px dashed var(--line);border-radius:var(--radius);padding:40px 22px;text-align:center;
+    color:var(--muted);cursor:pointer;background:var(--panel);transition:.15s}
+  .drop:hover{border-color:var(--accent);color:var(--text)}
+  .drop.has{padding:14px}
+  .drop img{max-width:100%;max-height:300px;border-radius:10px}
+  .drop .big{font-size:16px;margin-bottom:6px}
+  textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:14px;font-size:15px;font-family:inherit;resize:vertical;min-height:80px;margin-top:16px}
+  .result{margin-top:26px;min-height:120px;display:none;flex-wrap:wrap;gap:14px;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;
+    align-items:center;justify-content:center}
+  .result.show{display:flex}
+  .result img,.result video{max-width:100%;max-height:420px;border-radius:10px}
+  .out{position:relative}
+  .out a.dl{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);padding:6px 10px;
+    border-radius:8px;color:#fff;text-decoration:none;font-size:12px}
+  .spinner{width:38px;height:38px;border:3px solid var(--line);border-top-color:var(--accent);
+    border-radius:50%;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .stat{text-align:center;color:var(--muted);font-size:13px;margin-top:10px;min-height:18px}
+  .msg{padding:11px 14px;border-radius:9px;font-size:13px;margin-top:14px;display:none}
+  .msg.err{background:rgba(255,107,107,.12);color:var(--err);border:1px solid rgba(255,107,107,.3);display:block}
+  .badge{font-size:10px;padding:2px 7px;border-radius:999px;background:var(--panel2);
+    color:var(--muted);border:1px solid var(--line);margin-left:6px}
+  .badge.set{color:var(--ok);border-color:rgba(62,207,142,.4)}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal.show{display:flex}
+  .modal .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px;max-width:460px;width:92%}
+  label{display:block;font-size:12px;color:var(--muted);margin:16px 0 6px}
+  input[type=text],input[type=password]{width:100%;background:var(--panel2);border:1px solid var(--line);
+    color:var(--text);border-radius:8px;padding:11px;font-size:14px}
+  .hint{font-size:11px;color:var(--muted);margin-top:5px}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>◆ AI Studio</span></h1>
+  <button class="btn" onclick="openSettings()">⚙ Settings <span id="cfgBadge" class="badge"></span></button>
+</header>
+
+<div class="wrap">
+  <div class="modeToggle">
+    <div class="tab active" id="tab-edit" onclick="setMode('edit')">✏️ Edit</div>
+    <div class="tab" id="tab-generate" onclick="setMode('generate')">🖼️ Generate</div>
+    <div class="tab" id="tab-video" onclick="setMode('video')">🎬 Image→Video</div>
+  </div>
+
+  <!-- 1. drop image (hidden in Generate mode) -->
+  <div id="imageBlock">
+    <div class="drop" id="drop" onclick="document.getElementById('file').click()">
+      <div class="big">⬆ Drop an image here</div>
+      <div>or click to choose a file</div>
+      <input type="file" id="file" accept="image/*" hidden/>
+    </div>
+  </div>
+
+  <!-- 2. prompt -->
+  <textarea id="prompt" placeholder="Describe what you want… e.g. 'make it cyberpunk neon at night'"></textarea>
+
+  <!-- resolution + count -->
+  <div style="display:flex;gap:12px;margin-top:14px;align-items:flex-end">
+    <div style="flex:1">
+      <label style="display:block;color:var(--muted);font-size:12px;margin-bottom:6px">Resolution</label>
+      <select id="resolution" style="width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px"></select>
+    </div>
+    <div id="countWrap" style="flex:1">
+      <label style="display:block;color:var(--muted);font-size:12px;margin-bottom:6px">Images</label>
+      <select id="count" style="width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px">
+        <option>1</option><option>2</option><option>3</option><option>4</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 3. generate -->
+  <button class="btn primary" id="goBtn" style="width:100%;margin-top:16px;padding:14px" onclick="run()">
+    Generate
+  </button>
+  <div class="stat" id="stat"></div>
+  <div class="msg" id="msg"></div>
+
+  <!-- 4. result -->
+  <div class="result" id="result"></div>
+</div>
+
+<!-- Settings -->
+<div class="modal" id="settings">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 style="margin:0">Settings</h3>
+      <button class="btn" onclick="closeSettings()">✕</button>
+    </div>
+    <p class="hint">Saved only in this browser. Sent to your local server per request, never written to disk.</p>
+
+    <label>xAI API key</label>
+    <input type="password" id="cfg_key" placeholder="xai-..." onfocus="if(this.value.includes('•'))this.value=''"/>
+    <div class="hint">console.x.ai → API Keys. All three tabs use this one key.</div>
+
+    <button class="btn primary" style="width:100%;margin-top:18px;padding:11px" onclick="saveCfg()">Save</button>
+  </div>
+</div>
+
+<script>
+let mode = "edit";               // edit | generate | video
+let curImage = null;             // data URL
+let curW = 0, curH = 0;          // source image dimensions
+const TASK_OF = { edit:"edit", generate:"generate", video:"i2v" };
+const RES_OPTS = {
+  edit:     [["1k","1K"],["2k","2K"]],
+  generate: [["1k","1K"],["2k","2K"]],
+  video:    [["480p","480p"],["720p","720p"]],
+};
+
+function cfg(){ try{return JSON.parse(localStorage.getItem("ai_cfg")||"{}")}catch(e){return {}} }
+function setCfg(c){ localStorage.setItem("ai_cfg", JSON.stringify(c)); }
+
+function setMode(m){
+  mode = m;
+  document.getElementById("tab-edit").classList.toggle("active", m==="edit");
+  document.getElementById("tab-generate").classList.toggle("active", m==="generate");
+  document.getElementById("tab-video").classList.toggle("active", m==="video");
+  document.getElementById("goBtn").textContent =
+    m==="video" ? "Generate Video" : m==="edit" ? "Edit Image" : "Generate Image";
+  document.getElementById("prompt").placeholder =
+    m==="video" ? "Describe the motion… e.g. 'slow cinematic zoom, rain falling'"
+    : m==="edit" ? "Tell it what to change… e.g. 'change her outfit to a beautiful red saree'"
+    : "Describe the image… e.g. 'a neon-lit Tokyo street in the rain, cinematic'";
+  // Generate is text-to-image: no source image needed
+  document.getElementById("imageBlock").style.display = m==="generate" ? "none" : "block";
+  // Image count only applies to image generation/editing, not video
+  document.getElementById("countWrap").style.display = m==="video" ? "none" : "block";
+  // populate resolution choices for this mode
+  const sel=document.getElementById("resolution"); sel.innerHTML="";
+  RES_OPTS[m].forEach(([val,label],i)=>{
+    const o=document.createElement("option"); o.value=val; o.textContent=label;
+    if(i===0) o.selected=true; sel.appendChild(o);
+  });
+}
+
+/* ---- image drop / pick ---- */
+function init(){
+  const file=document.getElementById("file");
+  file.addEventListener("change",e=>{loadFile(e.target.files[0]);file.value="";});
+  const drop=document.getElementById("drop");
+  drop.addEventListener("dragover",e=>{e.preventDefault();drop.style.borderColor="var(--accent)";});
+  drop.addEventListener("dragleave",()=>drop.style.borderColor="");
+  drop.addEventListener("drop",e=>{e.preventDefault();drop.style.borderColor="";loadFile(e.dataTransfer.files[0]);});
+  setMode("edit");   // populates the resolution dropdown
+  updateBadge();
+}
+function loadFile(f){
+  if(!f || !f.type.startsWith("image/")) return;
+  const r=new FileReader();
+  r.onload=e=>{ downscale(e.target.result, 1024, (dataUrl,w,h)=>{ curImage=dataUrl; curW=w; curH=h; showPreview(); }); };
+  r.readAsDataURL(f);
+}
+// Resize big photos down to maxSide before sending — keeps payloads small
+// so the browser never has to ship/handle multi-MB base64. Reports final dims.
+function downscale(dataUrl, maxSide, cb){
+  const img=new Image();
+  img.onload=()=>{
+    let w=img.width, h=img.height;
+    if(Math.max(w,h)<=maxSide){ cb(dataUrl, w, h); return; }
+    const s=maxSide/Math.max(w,h); w=Math.round(w*s); h=Math.round(h*s);
+    const c=document.createElement("canvas"); c.width=w; c.height=h;
+    c.getContext("2d").drawImage(img,0,0,w,h);
+    cb(c.toDataURL("image/jpeg",0.9), w, h);
+  };
+  img.onerror=()=>cb(dataUrl, 0, 0);
+  img.src=dataUrl;
+}
+function showPreview(){
+  const d=document.getElementById("drop");
+  d.classList.add("has");
+  d.innerHTML=`<img src="${curImage}"/><div class="hint" style="margin-top:8px">Click to change image</div>
+               <input type="file" id="file" accept="image/*" hidden/>`;
+  document.getElementById("file").addEventListener("change",e=>{loadFile(e.target.files[0]);});
+}
+
+/* ---- generate ---- */
+async function run(){
+  const c=cfg();
+  const prompt=document.getElementById("prompt").value.trim();
+  const stat=document.getElementById("stat");
+  const res=document.getElementById("result");
+  msg("");
+
+  if(!c.key) return err("Add your xAI API key in ⚙ Settings.");
+  if(mode!=="generate" && !curImage) return err("Drop or choose a source image first.");
+  if(!prompt)   return err("Type a prompt describing what you want.");
+
+  const btn=document.getElementById("goBtn"); btn.disabled=true;
+  res.className="result show"; res.innerHTML='<div class="spinner"></div>';
+  stat.textContent = mode==="video"
+    ? "Generating with Grok Imagine… video can take a minute or two."
+    : "Generating with Grok Imagine…";
+
+  const task = TASK_OF[mode];
+  const opts = buildOpts();
+  try{
+    if(mode==="video"){ await runVideo(c.key, prompt, opts, stat, res); return; }
+    const r=await fetch("/api/run",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({task,provider:"xai",model:"grok-imagine",api_key:c.key,prompt,
+        image:curImage,images:[curImage],opts})});
+    const data=await r.json();
+    if(!r.ok || data.error) throw new Error(data.error||("HTTP "+r.status));
+
+    stat.textContent="";
+    const urls = data.urls && data.urls.length ? data.urls : [data.url];
+    res.innerHTML="";
+    urls.forEach((u,i)=>{
+      const src = (u.startsWith("data:") || u.startsWith("/")) ? u : "/api/proxy?url="+encodeURIComponent(u);
+      const box=document.createElement("div"); box.className="out";
+      box.innerHTML = data.type==="video"
+        ? `<video src="${src}" controls autoplay loop></video><a class="dl" href="${src}" download="output.mp4">⬇</a>`
+        : `<img src="${src}"/><a class="dl" href="${src}" download="output_${i+1}.png">⬇</a>`;
+      res.appendChild(box);
+    });
+  }catch(e){ err(e.message); stat.textContent=""; res.className="result"; }
+  finally{ btn.disabled=false; }
+}
+
+// Video: start the job, then poll status from the browser (works within
+// serverless function timeouts on Vercel).
+async function runVideo(apiKey, prompt, opts, stat, res){
+  const post=(url,body)=>fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(r=>r.json());
+  stat.textContent="Starting video…";
+  const s=await post("/api/video/start",{api_key:apiKey,prompt,image:curImage,opts});
+  if(s.error) throw new Error(s.error);
+  let url=s.url;
+  if(!url){
+    const rid=s.request_id;
+    for(let i=0;i<90;i++){            // ~6 min at 4s intervals
+      await new Promise(r=>setTimeout(r,4000));
+      const st=await post("/api/video/status",{api_key:apiKey,request_id:rid});
+      if(st.error) throw new Error(st.error);
+      if(st.status==="done"){ url=st.url; break; }
+      stat.textContent="Rendering video… "+((i+1)*4)+"s";
+    }
+  }
+  if(!url) throw new Error("Video timed out — try again.");
+  stat.textContent="";
+  const src=(url.startsWith("data:")||url.startsWith("/"))?url:"/api/proxy?url="+encodeURIComponent(url);
+  res.innerHTML=`<div class="out"><video src="${src}" controls autoplay loop></video>`+
+                `<a class="dl" href="${src}" download="output.mp4">⬇</a></div>`;
+}
+
+// Build opts: resolution (per tab), image count, and aspect for generate/video.
+function buildOpts(){
+  const o={ resolution: document.getElementById("resolution").value };
+  if(mode==="generate" || mode==="video"){
+    o.aspect_ratio = (curW && curH && curW>curH) ? "16:9" : "9:16";
+  }
+  if(mode==="edit" || mode==="generate"){
+    o.n = parseInt(document.getElementById("count").value) || 1;
+  }
+  return o;
+}
+
+function msg(t){const m=document.getElementById("msg");if(!t){m.className="msg";m.textContent="";}else{m.className="msg err";m.textContent=t;}}
+function err(t){ msg(t); return false; }
+
+/* ---- settings ---- */
+function openSettings(){
+  const c=cfg();
+  document.getElementById("cfg_key").value = c.key ? c.key.replace(/./g,'•') : "";
+  document.getElementById("settings").classList.add("show");
+}
+function closeSettings(){document.getElementById("settings").classList.remove("show");}
+function saveCfg(){
+  const c=cfg();
+  const kv=document.getElementById("cfg_key").value.trim();
+  if(kv && !kv.includes('•')) c.key=kv;
+  setCfg(c); updateBadge(); closeSettings();
+}
+function updateBadge(){
+  const c=cfg();
+  const b=document.getElementById("cfgBadge");
+  const ok = !!c.key;
+  b.textContent = ok ? "ready" : "setup"; b.className="badge"+(ok?" set":"");
+}
+
+init();
+</script>
+</body>
+</html>
