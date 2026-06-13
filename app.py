@@ -70,8 +70,20 @@ def index():
     # Return HTML with an explicit content-type. send_from_directory uses a
     # streaming response whose Content-Type can get dropped by Vercel's WSGI
     # bridge, which makes the browser download the page instead of rendering it.
-    with open(os.path.join(STATIC_DIR, "index.html"), encoding="utf-8") as f:
-        return Response(f.read(), mimetype="text/html")
+    path = os.path.join(STATIC_DIR, "index.html")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return Response(f.read(), mimetype="text/html")
+    except Exception as e:
+        # Surface the real cause instead of an opaque 500.
+        try:
+            listing = os.listdir(STATIC_DIR)
+        except Exception as le:
+            listing = f"(cannot list {STATIC_DIR}: {le})"
+        return Response(
+            f"index.html not found.\nLooked at: {path}\nstatic/ contents: {listing}\nerror: {e}",
+            mimetype="text/plain", status=500,
+        )
 
 
 @app.route("/go/providers")
